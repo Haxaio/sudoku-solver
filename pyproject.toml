@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "sudoku-solver"
 version = "0.1.0"
-description = "A program for solving Sudoku using Wave Function Collapse"
+description = "A program for solving Sudoku puzzles using a Wave Function Collapse algorithm."
 authors = ["M Harding <m@haxa.io>"]
 license = "MIT"
 
