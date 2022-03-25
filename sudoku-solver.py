@@ -143,7 +143,6 @@ class SudokuSolver(SudokuBoard):
 
     def collapse_cell(self, cell, state=None):
         if not state:
-            neighbors = self.get_cell_neighbors(cell)
             state = self.get_most_likely_probability_for_cell(cell)
 
         cell.probabilities = [state]
