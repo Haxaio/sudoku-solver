@@ -138,7 +138,7 @@ class SudokuSolver(SudokuBoard):
 
     def solve(self):
         self.lowest_entropy_cell = self.get_lowest_entropy_cell()
-        while not self.collapsed:
+        while not self.collapsed():
             self.collapse_cell(self.lowest_entropy_cell)
 
     def collapse_cell(self, cell, state=None):
@@ -160,7 +160,6 @@ class SudokuSolver(SudokuBoard):
 
         self.lowest_entropy_cell = self.get_lowest_entropy_cell()
 
-    @property
     def collapsed(self):
         for row in self.cells:
             for cell in row:
@@ -190,7 +189,7 @@ class SudokuSolverGUI(SudokuSolver):
 
         # Slow solve
         self.solving = False
-        self.seconds_per_tick = 0.25
+        self.seconds_per_tick = 1
         self.last_tick = 0
         self.last_update = 0
 
