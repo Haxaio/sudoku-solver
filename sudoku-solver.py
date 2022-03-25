@@ -20,6 +20,7 @@ class Colors:
         self.probability_hover = 0
         self.text_disabled = 1
         self.cell_disabled = 12
+        self.cell_error = 8
 
 
 class Cell:
@@ -95,19 +96,24 @@ class SudokuSolver(SudokuBoard):
     def __init__(self):
         SudokuBoard.reset(self)
 
+    def random_probability(self, cell):
+        if len(cell.probabilities) > 0:
+            return cell.probabilities[random.randrange(0, len(cell.probabilities), 1)]
+        else:
+            return 0
+
     def solve(self):
         while not self.collapsed:
             self.lowest_entropy_cell = self.get_lowest_entropy_cell()
             if self.lowest_entropy_cell:
                 self.collapse_cell(self.lowest_entropy_cell)
 
-    def collapse_cell(self, cell, value=None):
-        cell.collapsed = True
-        if not value and len(cell.probabilities) > 0:
-            value = cell.probabilities[random.randrange(0, len(cell.probabilities), 1)]
+    def collapse_cell(self, cell, probability=None):
+        if not probability:
+            probability = self.random_probability(cell)
 
-        if value:
-            cell.probabilities = [value]
+        cell.collapsed = True
+        cell.probabilities = [probability]
 
         self.propagate()
 
@@ -120,8 +126,6 @@ class SudokuSolver(SudokuBoard):
                     cell.probabilities = valid_numbers
 
         self.lowest_entropy_cell = self.get_lowest_entropy_cell()
-        if self.lowest_entropy_cell and self.lowest_entropy_cell.entropy == 1:
-            self.collapse_cell(self.lowest_entropy_cell)
 
     def get_lowest_entropy_cell(self):
         uncollapsed_cells = [c for r in self.cells for c in r if not c.collapsed]
@@ -276,6 +280,11 @@ class SudokuSolverGUI(SudokuSolver):
                     color = self.colors.cell_lowest_entropy
                 if self.cells[row_index][col_index].collapsed:
                     color = self.colors.cell_collapsed
+                if (
+                    self.cells[row_index][col_index].probabilities == [0]
+                    or self.cells[row_index][col_index].probabilities == []
+                ):
+                    color = self.colors.cell_error
                 pyxel.rect(x, y, size, size, color)
 
     def draw_probabilities(self):
