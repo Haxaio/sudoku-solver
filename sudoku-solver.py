@@ -93,7 +93,7 @@ class SudokuSolver(SudokuBoard):
     def __init__(self):
         SudokuBoard.reset(self)
 
-    def get_possible_states(self, cell):
+    def get_possible_states_for_cell(self, cell):
         possible_states = [i for i in range(1, 10)]
 
         for cell in self.get_cell_neighbors(cell):
@@ -102,7 +102,7 @@ class SudokuSolver(SudokuBoard):
 
         return possible_states
 
-    def get_most_likely_probability(self, cell):
+    def get_most_likely_probability_for_cell(self, cell):
         if cell.entropy > 0:
             probabilities_weights = []
 
@@ -117,30 +117,6 @@ class SudokuSolver(SudokuBoard):
             probabilities_weights.sort()
 
             return probabilities_weights[0][1]
-
-    def solve(self):
-        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
-        while not self.collapsed:
-            self.collapse_cell(self.lowest_entropy_cell)
-
-    def collapse_cell(self, cell, state=None):
-        if not state:
-            neighbors = self.get_cell_neighbors(cell)
-            state = self.get_most_likely_probability(cell)
-
-        cell.probabilities = [state]
-
-        self.propagate()
-
-    def propagate(self):
-        for row_index, row in enumerate(self.cells):
-            for col_index, cell in enumerate(row):
-                cell = self.cells[row_index][col_index]
-                if not cell.collapsed:
-                    possible_states = self.get_possible_states(cell)
-                    cell.probabilities = possible_states
-
-        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
 
     def get_lowest_entropy_cell(self):
         uncollapsed_cells = [c for r in self.cells for c in r if not c.collapsed]
@@ -159,6 +135,30 @@ class SudokuSolver(SudokuBoard):
         ]
 
         return lowest_entropy_cell
+
+    def solve(self):
+        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
+        while not self.collapsed:
+            self.collapse_cell(self.lowest_entropy_cell)
+
+    def collapse_cell(self, cell, state=None):
+        if not state:
+            neighbors = self.get_cell_neighbors(cell)
+            state = self.get_most_likely_probability_for_cell(cell)
+
+        cell.probabilities = [state]
+
+        self.propagate()
+
+    def propagate(self):
+        for row_index, row in enumerate(self.cells):
+            for col_index, cell in enumerate(row):
+                cell = self.cells[row_index][col_index]
+                if not cell.collapsed:
+                    possible_states = self.get_possible_states_for_cell(cell)
+                    cell.probabilities = possible_states
+
+        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
 
     @property
     def collapsed(self):
@@ -321,7 +321,7 @@ class SudokuSolverGUI(SudokuSolver):
         self.selected_cell = cell
         self.selected_probability = (probability_col_index, probability_row_index)
 
-        possible_states = self.get_possible_states(cell)
+        possible_states = self.get_possible_states_for_cell(cell)
 
         if self.debug or self.selected_value in possible_states and not cell.collapsed:
             self.collapse_cell(cell, self.selected_value)
