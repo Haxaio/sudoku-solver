@@ -157,8 +157,6 @@ class SudokuSolver(SudokuBoard):
                     possible_states = self.get_possible_states_for_cell(cell)
                     cell.probabilities = possible_states
 
-        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
-
     def collapsed(self):
         for row in self.cells:
             for cell in row:
