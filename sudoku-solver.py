@@ -2,7 +2,24 @@ from math import floor
 import random
 import time
 
+from pyxel import rect, text
 import pyxel
+
+
+class Colors:
+    def __init__(self):
+        self.cell_outline = 5
+        self.block_outline = 0
+        self.text = 1
+        self.cell = 6
+        self.text_collapsed = 5
+        self.cell_collapsed = 11
+        self.text_lowest_entropy = 9
+        self.cell_lowest_entropy = 10
+        self.text_hover = 7
+        self.probability_hover = 0
+        self.text_disabled = 1
+        self.cell_disabled = 12
 
 
 class Cell:
@@ -137,6 +154,34 @@ class SudokuSolverGUI(SudokuSolver):
     def __init__(self):
         SudokuSolver.__init__(self)
 
+        # UI stuff
+        self.character_size = 10
+        self.screen_size = self.character_size * 3 * 3 * 3
+        self.colors = Colors()
+
+        # Controls
+        self.debug = False
+        self.help = False
+        self.selected_value = None
+        self.selected_cell = None
+        self.selected_probability = None
+
+        # Slow solve
+        self.solving = False
+        self.seconds_per_tick = 0.25
+        self.last_tick = 0
+        self.last_update = 0
+
+        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
+
+        pyxel.init(self.screen_size, self.screen_size, title="Sudoku Solver")
+        pyxel.mouse(True)
+        pyxel.run(self.update, self.draw)
+
+
+class SudokuSolverGUI(SudokuSolver):
+    def __init__(self):
+        SudokuSolver.__init__(self)
         # Sizes
         self.character_size = 9
         self.cell_size = self.character_size * 3
@@ -144,14 +189,7 @@ class SudokuSolverGUI(SudokuSolver):
         self.screen_size = self.block_size * 3
 
         # Colors
-        self.background = 7
-        self.background_dimmed = 8
-        self.background_highlighted = 15
-        self.foreground = 0
-        self.foreground_dimmed = 1
-        self.foreground_highlighted = 2
-        self.block_outline = 5
-        self.cell_outline = 6
+        self.colors = Colors()
 
         # Controls
         self.debug = False
@@ -205,7 +243,7 @@ class SudokuSolverGUI(SudokuSolver):
 
     def draw(self):
         # Clear background (color will appear as block gridlines)
-        pyxel.cls(self.block_outline)
+        pyxel.cls(self.colors.block_outline)
         self.draw_grid()
         self.draw_probabilities()
         if self.debug:
@@ -218,7 +256,7 @@ class SudokuSolverGUI(SudokuSolver):
             for col_index in range(0, 3):
                 x = col_index * self.block_size + 1
                 y = row_index * self.block_size + 1
-                pyxel.rect(x, y, size, size, self.cell_outline)
+                pyxel.rect(x, y, size, size, self.colors.cell_outline)
 
         # Draw cells (color will appear as cell background)
         size = self.cell_size - 2
@@ -226,7 +264,7 @@ class SudokuSolverGUI(SudokuSolver):
             for col_index in range(0, 9):
                 x = col_index * self.cell_size + 1
                 y = row_index * self.cell_size + 1
-                color = self.background
+                color = self.colors.cell
                 if (
                     self.selected_cell
                     and self.selected_cell.row == row_index
@@ -235,9 +273,9 @@ class SudokuSolverGUI(SudokuSolver):
                     and self.lowest_entropy_cell.row == row_index
                     and self.lowest_entropy_cell.col == col_index
                 ):
-                    color = self.background_highlighted
+                    color = self.colors.cell_lowest_entropy
                 if self.cells[row_index][col_index].collapsed:
-                    color = self.background_dimmed
+                    color = self.colors.cell_collapsed
                 pyxel.rect(x, y, size, size, color)
 
     def draw_probabilities(self):
@@ -257,7 +295,7 @@ class SudokuSolverGUI(SudokuSolver):
                     probability = probability_index + 1
 
                     if probability in cell.probabilities:
-                        pyxel.text(px, py, f"{probability}", self.foreground)
+                        pyxel.text(px, py, f"{probability}", self.colors.text)
 
     def draw_debug(self):
         if self.selected_cell:
