@@ -25,10 +25,19 @@ class Colors:
 
 class Cell:
     def __init__(self, col, row):
-        self.collapsed = False
         self.probabilities = [i for i in range(1, 10)]
         self.col = col
         self.row = row
+
+    @property
+    def collapsed(self):
+        return self.entropy <= 1
+
+    @property
+    def state(self):
+        if self.entropy > 0:
+            return self.probabilities[0]
+        return 0
 
     @property
     def entropy(self):
@@ -45,24 +54,12 @@ class SudokuBoard:
                 row.append(cell)
             self.cells.append(row)
 
-    def valid_numbers_for_cell(self, cell):
-        valid_numbers = [i for i in range(1, 10)]
-
+    def get_cell_neighbors(self, cell):
         row_cells = self.__get_row_cells(cell.row)
         col_cells = self.__get_col_cells(cell.col)
         block_cells = self.__get_block_cells(cell.col, cell.row)
 
-        cells = row_cells + col_cells + block_cells
-
-        for cell in cells:
-            if (
-                cell.collapsed
-                and len(cell.probabilities) > 0
-                and cell.probabilities[0] in valid_numbers
-            ):
-                valid_numbers.remove(cell.probabilities[0])
-
-        return valid_numbers
+        return row_cells + col_cells + block_cells
 
     # region Private Methods
     def __get_row_cells(self, row_index):
@@ -96,24 +93,42 @@ class SudokuSolver(SudokuBoard):
     def __init__(self):
         SudokuBoard.reset(self)
 
-    def random_probability(self, cell):
-        if len(cell.probabilities) > 0:
-            return cell.probabilities[random.randrange(0, len(cell.probabilities), 1)]
-        else:
-            return 0
+    def get_possible_states(self, cell):
+        possible_states = [i for i in range(1, 10)]
+
+        for cell in self.get_cell_neighbors(cell):
+            if cell.collapsed and cell.entropy > 0 and cell.state in possible_states:
+                possible_states.remove(cell.state)
+
+        return possible_states
+
+    def get_most_likely_probability(self, cell):
+        if cell.entropy > 0:
+            probabilities_weights = []
+
+            neighbor_values = []
+            for neighbor in self.get_cell_neighbors(cell):
+                neighbor_values += neighbor.probabilities
+
+            for probability in cell.probabilities:
+                weight = neighbor_values.count(probability)
+                probabilities_weights.append((weight, probability))
+
+            probabilities_weights.sort()
+
+            return probabilities_weights[0][1]
 
     def solve(self):
+        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
         while not self.collapsed:
-            self.lowest_entropy_cell = self.get_lowest_entropy_cell()
-            if self.lowest_entropy_cell:
-                self.collapse_cell(self.lowest_entropy_cell)
+            self.collapse_cell(self.lowest_entropy_cell)
 
-    def collapse_cell(self, cell, probability=None):
-        if not probability:
-            probability = self.random_probability(cell)
+    def collapse_cell(self, cell, state=None):
+        if not state:
+            neighbors = self.get_cell_neighbors(cell)
+            state = self.get_most_likely_probability(cell)
 
-        cell.collapsed = True
-        cell.probabilities = [probability]
+        cell.probabilities = [state]
 
         self.propagate()
 
@@ -121,9 +136,9 @@ class SudokuSolver(SudokuBoard):
         for row_index, row in enumerate(self.cells):
             for col_index, cell in enumerate(row):
                 cell = self.cells[row_index][col_index]
-                valid_numbers = self.valid_numbers_for_cell(cell)
                 if not cell.collapsed:
-                    cell.probabilities = valid_numbers
+                    possible_states = self.get_possible_states(cell)
+                    cell.probabilities = possible_states
 
         self.lowest_entropy_cell = self.get_lowest_entropy_cell()
 
@@ -152,35 +167,6 @@ class SudokuSolver(SudokuBoard):
                 if not cell.collapsed:
                     return False
         return True
-
-
-class SudokuSolverGUI(SudokuSolver):
-    def __init__(self):
-        SudokuSolver.__init__(self)
-
-        # UI stuff
-        self.character_size = 10
-        self.screen_size = self.character_size * 3 * 3 * 3
-        self.colors = Colors()
-
-        # Controls
-        self.debug = False
-        self.help = False
-        self.selected_value = None
-        self.selected_cell = None
-        self.selected_probability = None
-
-        # Slow solve
-        self.solving = False
-        self.seconds_per_tick = 0.25
-        self.last_tick = 0
-        self.last_update = 0
-
-        self.lowest_entropy_cell = self.get_lowest_entropy_cell()
-
-        pyxel.init(self.screen_size, self.screen_size, title="Sudoku Solver")
-        pyxel.mouse(True)
-        pyxel.run(self.update, self.draw)
 
 
 class SudokuSolverGUI(SudokuSolver):
@@ -335,9 +321,9 @@ class SudokuSolverGUI(SudokuSolver):
         self.selected_cell = cell
         self.selected_probability = (probability_col_index, probability_row_index)
 
-        valid_numbers = self.valid_numbers_for_cell(cell)
+        possible_states = self.get_possible_states(cell)
 
-        if self.debug or self.selected_value in valid_numbers and not cell.collapsed:
+        if self.debug or self.selected_value in possible_states and not cell.collapsed:
             self.collapse_cell(cell, self.selected_value)
 
 
